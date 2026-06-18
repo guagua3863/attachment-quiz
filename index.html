@@ -134,6 +134,18 @@ body{
 .btn.primary{border-color:rgba(196,181,255,.6);background:rgba(196,181,255,.16)}
 /* 截圖時只關掉玻璃陰影，保留半透明玻璃底，讓手繪的夢幻背景能透出來 */
 #result.capturing{box-shadow:none!important}
+/* iOS 長按存圖浮層 */
+#saveov{display:none;position:fixed;inset:0;z-index:60;
+  background:rgba(9,7,20,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;padding:24px;overflow:auto}
+#saveov .saveov-box{display:flex;flex-direction:column;align-items:center;gap:16px;max-width:480px;width:100%}
+#saveov .saveov-tip{font-family:"Noto Sans TC",sans-serif;font-size:15px;line-height:1.7;color:#e7defb;
+  text-align:center;text-shadow:0 0 16px rgba(196,181,255,.4)}
+#saveov img{max-width:100%;max-height:70vh;height:auto;border-radius:18px;
+  box-shadow:0 24px 60px -20px rgba(0,0,0,.8);border:1px solid rgba(255,255,255,.14)}
+#saveov .saveov-close{cursor:pointer;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.06);
+  color:#f4eefe;font-family:"Cormorant Garamond",serif;font-weight:600;font-size:16px;letter-spacing:.1em;
+  padding:11px 32px;border-radius:99px}
 
 .screen{animation:rise .55s cubic-bezier(.2,.7,.2,1)}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
@@ -575,11 +587,43 @@ async function shot(){
     node.classList.remove("capturing");
     ctx.drawImage(panel, M, M, rect.width, rect.height);
 
-    const link=document.createElement("a");
-    link.download="依戀座標.png"; link.href=cv.toDataURL("image/png"); link.click();
-    btn.textContent="已保存 ✓";
+    const url=cv.toDataURL("image/png");
+    if(isIOS()){
+      showSaveOverlay(url);
+      btn.textContent="圖片已產生";
+    }else{
+      const link=document.createElement("a");
+      link.download="依戀座標.png"; link.href=url; link.click();
+      btn.textContent="已保存 ✓";
+    }
   }catch(e){ node.classList.remove("capturing"); btn.textContent="截圖失敗，請重試"; }
   setTimeout(()=>btn.textContent=old,1800);
+}
+
+/* iOS 偵測（含把自己報成 Mac 的 iPadOS） */
+function isIOS(){
+  const ua=navigator.userAgent||"";
+  return /iP(hone|ad|od)/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+}
+
+/* iOS 專用：顯示圖片，引導長按存到相簿 */
+function showSaveOverlay(url){
+  let ov=document.getElementById("saveov");
+  if(!ov){
+    ov=document.createElement("div"); ov.id="saveov";
+    ov.innerHTML=
+      '<div class="saveov-box">'
+      +'<p class="saveov-tip">長按下方圖片 →「加入照片」<br>即可存到相簿</p>'
+      +'<img id="saveov-img" alt="依戀座標結果">'
+      +'<button class="saveov-close">關閉</button>'
+      +'</div>';
+    document.body.appendChild(ov);
+    const hide=()=>{ov.style.display="none";};
+    ov.addEventListener("click",e=>{ if(e.target===ov) hide(); });
+    ov.querySelector(".saveov-close").addEventListener("click",hide);
+  }
+  ov.querySelector("#saveov-img").src=url;
+  ov.style.display="flex";
 }
 
 function reset(){show("intro");}
