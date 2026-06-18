@@ -135,6 +135,15 @@ body{
 /* 截圖時卡片設透明底、去邊去陰影，讓原生 Canvas 畫的夢幻底+光球透出來 */
 #result.capturing{background:transparent!important;border:0!important;box-shadow:none!important;
   backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* iOS 渲染偏暗 → 截圖時針對 iOS 額外提亮文字與圖表（Android 不受影響） */
+#result.capturing-ios .profile{color:#f7f2ff!important}
+#result.capturing-ios .theory p{color:#ece5fb!important}
+#result.capturing-ios .theory h3{color:#daccf4!important}
+#result.capturing-ios .tclinic{color:#d2c7ee!important}
+#result.capturing-ios .eyebrow{color:rgba(244,238,254,.58)!important}
+#result.capturing-ios .foot{color:rgba(244,238,254,.6)!important}
+#result.capturing-ios .resultmap line{stroke:rgba(255,255,255,.5)!important}
+#result.capturing-ios .resultmap text{opacity:1!important}
 /* iOS 長按存圖浮層 */
 #saveov{display:none;position:fixed;inset:0;z-index:60;
   background:rgba(9,7,20,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
@@ -527,6 +536,7 @@ async function shot(){
     const M=26, W=rect.width+M*2, H=rect.height+M*2, D=Math.max(W,H);
     /* iOS Safari 有 canvas 尺寸上限，卡片太長時自動降倍率，避免內容被縱向壓扁 */
     const SC=Math.max(1, Math.min(2, 4000/D));
+    const ios=isIOS();
     const cv=document.createElement("canvas");
     cv.width=Math.round(W*SC); cv.height=Math.round(H*SC);
     const ctx=cv.getContext("2d"); ctx.scale(SC,SC);
@@ -549,23 +559,24 @@ async function shot(){
     orb(W*0.72,H*0.96,D*0.30,"#ffd9a8",0.28);
     ctx.globalCompositeOperation="source-over";
 
-    /* 玻璃卡底（加深的半透明：字與圖表清楚，周圍仍透出光球） */
+    /* 玻璃卡底（iOS 渲染偏暗 → 調淡讓光球/圖表更亮；Android 維持原深底以保對比） */
     rr(ctx,M,M,rect.width,rect.height,24);
-    ctx.fillStyle="rgba(15,11,32,0.85)"; ctx.fill();
+    ctx.fillStyle = ios ? "rgba(26,20,52,0.64)" : "rgba(15,11,32,0.85)"; ctx.fill();
     rr(ctx,M,M,rect.width,rect.height,24);
-    ctx.lineWidth=1; ctx.strokeStyle="rgba(255,255,255,0.16)"; ctx.stroke();
+    ctx.lineWidth=1; ctx.strokeStyle="rgba(255,255,255,0.18)"; ctx.stroke();
 
     /* 卡片內容（透明底，html2canvas 只畫文字/座標圖） */
     node.classList.add("capturing");
+    if(ios) node.classList.add("capturing-ios");
     const panel=await html2canvas(node,{backgroundColor:null,scale:SC,useCORS:true,
       ignoreElements:el=>el.hasAttribute&&el.hasAttribute("data-noshot")});
-    node.classList.remove("capturing");
+    node.classList.remove("capturing","capturing-ios");
     ctx.drawImage(panel, M, M, rect.width, rect.height);
 
     const url=cv.toDataURL("image/png");
-    if(isIOS()){ showSaveOverlay(url); btn.textContent="圖片已產生"; }
+    if(ios){ showSaveOverlay(url); btn.textContent="圖片已產生"; }
     else{ const link=document.createElement("a"); link.download="依戀座標.png"; link.href=url; link.click(); btn.textContent="已保存 ✓"; }
-  }catch(e){ node.classList.remove("capturing"); btn.textContent="截圖失敗，請重試"; }
+  }catch(e){ node.classList.remove("capturing","capturing-ios"); btn.textContent="截圖失敗，請重試"; }
   setTimeout(()=>btn.textContent=old,1800);
 }
 
