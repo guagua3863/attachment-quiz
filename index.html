@@ -15,7 +15,6 @@
 <meta name="twitter:title" content="依戀座標 · 夢境心理測驗">
 <meta name="twitter:description" content="越荒謬的問題，越騙不了你的心。九題，定位你的依戀座標。">
 <meta name="twitter:image" content="https://guagua3863.github.io/attachment-quiz/cover.png">
-<script src="./html2canvas.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap');
 
@@ -132,21 +131,6 @@ body{
   padding:13px 30px;border-radius:99px;transition:background .18s,box-shadow .2s}
 .btn:hover{background:rgba(255,255,255,.12);box-shadow:0 0 24px rgba(196,181,255,.4)}
 .btn.primary{border-color:rgba(196,181,255,.6);background:rgba(196,181,255,.16)}
-/* 截圖時卡片設透明底、去邊去陰影，讓原生 Canvas 畫的夢幻底+光球透出來 */
-#result.capturing{background:transparent!important;border:0!important;box-shadow:none!important;
-  backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-/* iOS 長按存圖浮層 */
-#saveov{display:none;position:fixed;inset:0;z-index:60;
-  background:rgba(9,7,20,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  align-items:center;justify-content:center;padding:24px;overflow:auto}
-#saveov .saveov-box{display:flex;flex-direction:column;align-items:center;gap:16px;max-width:480px;width:100%}
-#saveov .saveov-tip{font-family:"Noto Sans TC",sans-serif;font-size:15px;line-height:1.7;color:#e7defb;
-  text-align:center;text-shadow:0 0 16px rgba(196,181,255,.4)}
-#saveov img{max-width:100%;max-height:70vh;height:auto;border-radius:18px;
-  box-shadow:0 24px 60px -20px rgba(0,0,0,.8);border:1px solid rgba(255,255,255,.14)}
-#saveov .saveov-close{cursor:pointer;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.06);
-  color:#f4eefe;font-family:"Cormorant Garamond",serif;font-weight:600;font-size:16px;letter-spacing:.1em;
-  padding:11px 32px;border-radius:99px}
 
 .screen{animation:rise .55s cubic-bezier(.2,.7,.2,1)}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
@@ -198,8 +182,7 @@ body{
       <p id="theory"></p>
     </div>
     <p class="foot">依附理論源自 Bowlby 與 Ainsworth 對親子依附的觀察，Hazan &amp; Shaver（1987）延伸至成人愛情；四象限對應 Bartholomew &amp; Horowitz（1991），雙維度量化來自 ECR 量表（Brennan, Clark &amp; Shaver, 1998）。以上為理論脈絡，具體統計數字未經查證。本測驗僅供娛樂與自我覺察，非臨床診斷工具。</p>
-    <div class="btnrow" data-noshot>
-      <button class="btn primary" id="shotbtn" onclick="shot()">截圖保存</button>
+    <div class="btnrow">
       <button class="btn" onclick="reset()">再抽一次</button>
     </div>
   </section>
@@ -509,92 +492,6 @@ function drawMap(anx,avoid,color){
   +'</svg>';
 }
 
-/* ===== 截圖保存：原生 Canvas 畫亮夢幻底+光球（跨裝置可靠），html2canvas 只畫透明文字層 ===== */
-function rr(ctx,x,y,w,h,r){ctx.beginPath();
-  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
-const hexA=(h,a)=>{const n=parseInt(h.slice(1),16);
-  return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")";};
-
-async function shot(){
-  const btn=$("shotbtn"); const old=btn.textContent;
-  if(typeof html2canvas==="undefined"){btn.textContent="載入中…請重試";setTimeout(()=>btn.textContent=old,1600);return;}
-  btn.textContent="處理中…";
-  const node=$("result");
-  try{
-    if(document.fonts&&document.fonts.ready){ try{ await document.fonts.ready; }catch(_){} }
-    const rect=node.getBoundingClientRect();
-    const M=26, W=rect.width+M*2, H=rect.height+M*2, D=Math.max(W,H);
-    const ios=isIOS();
-    /* iOS Safari 的 canvas 尺寸上限較嚴：倍率上限壓更低，徹底避免內容被縱向壓扁 */
-    const SC=Math.max(1, Math.min(2, (ios?2600:4000)/D));
-    const cv=document.createElement("canvas");
-    cv.width=Math.round(W*SC); cv.height=Math.round(H*SC);
-    const ctx=cv.getContext("2d"); ctx.scale(SC,SC);
-
-    /* 底漸層（單一配方，跨裝置一致） */
-    const g=ctx.createLinearGradient(W*0.15,0,W*0.85,H);
-    g.addColorStop(0,"#2a2152"); g.addColorStop(.55,"#332863"); g.addColorStop(1,"#241d47");
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-
-    /* 夢幻光球（原生 radial，跨裝置一致） */
-    const orb=(x,y,r,c,a)=>{const rg=ctx.createRadialGradient(x,y,0,x,y,r);
-      rg.addColorStop(0,hexA(c,a));rg.addColorStop(0.55,hexA(c,a*0.4));rg.addColorStop(1,"rgba(0,0,0,0)");
-      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill();};
-    ctx.globalCompositeOperation="lighter";
-    orb(W*0.84,H*0.05,D*0.42,"#c4b5ff",0.55);
-    orb(W*0.12,H*0.15,D*0.34,"#9ad8ff",0.46);
-    orb(W*0.93,H*0.70,D*0.40,"#a8f0e0",0.40);
-    orb(W*0.05,H*0.86,D*0.36,"#ffb3d9",0.46);
-    orb(W*0.52,H*0.42,D*0.30,"#e0b3ff",0.30);
-    orb(W*0.72,H*0.96,D*0.30,"#ffd9a8",0.28);
-    ctx.globalCompositeOperation="source-over";
-
-    /* 玻璃卡底（單一配方：字與圖表清楚，周圍透出光球） */
-    rr(ctx,M,M,rect.width,rect.height,24);
-    ctx.fillStyle="rgba(15,11,32,0.82)"; ctx.fill();
-    rr(ctx,M,M,rect.width,rect.height,24);
-    ctx.lineWidth=1; ctx.strokeStyle="rgba(255,255,255,0.18)"; ctx.stroke();
-
-    /* 卡片內容（透明底，html2canvas 只畫文字/座標圖） */
-    node.classList.add("capturing");
-    const panel=await html2canvas(node,{backgroundColor:null,scale:SC,useCORS:true,
-      ignoreElements:el=>el.hasAttribute&&el.hasAttribute("data-noshot")});
-    node.classList.remove("capturing");
-    ctx.drawImage(panel, M, M, rect.width, rect.height);
-
-    const url=cv.toDataURL("image/png");
-    if(ios){ showSaveOverlay(url); btn.textContent="圖片已產生"; }
-    else{ const link=document.createElement("a"); link.download="依戀座標.png"; link.href=url; link.click(); btn.textContent="已保存 ✓"; }
-  }catch(e){ node.classList.remove("capturing"); btn.textContent="截圖失敗，請重試"; }
-  setTimeout(()=>btn.textContent=old,1800);
-}
-
-/* iOS 偵測（含把自己報成 Mac 的 iPadOS） */
-function isIOS(){
-  const ua=navigator.userAgent||"";
-  return /iP(hone|ad|od)/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-}
-
-/* iOS 專用：顯示圖片，引導長按存到相簿 */
-function showSaveOverlay(url){
-  let ov=document.getElementById("saveov");
-  if(!ov){
-    ov=document.createElement("div"); ov.id="saveov";
-    ov.innerHTML=
-      '<div class="saveov-box">'
-      +'<p class="saveov-tip">長按下方圖片 →「加入照片」<br>即可存到相簿</p>'
-      +'<img id="saveov-img" alt="依戀座標結果">'
-      +'<button class="saveov-close">關閉</button>'
-      +'</div>';
-    document.body.appendChild(ov);
-    const hide=()=>{ov.style.display="none";};
-    ov.addEventListener("click",e=>{ if(e.target===ov) hide(); });
-    ov.querySelector(".saveov-close").addEventListener("click",hide);
-  }
-  ov.querySelector("#saveov-img").src=url;
-  ov.style.display="flex";
-}
 
 function reset(){show("intro");}
 </script>
