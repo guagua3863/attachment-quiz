@@ -135,14 +135,16 @@ body{
 /* 截圖時卡片設透明底、去邊去陰影，讓原生 Canvas 畫的夢幻底+光球透出來 */
 #result.capturing{background:transparent!important;border:0!important;box-shadow:none!important;
   backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-/* iOS 渲染偏暗 → 截圖時針對 iOS 額外提亮文字與圖表（Android 不受影響） */
-#result.capturing-ios .profile{color:#f7f2ff!important}
-#result.capturing-ios .theory p{color:#ece5fb!important}
-#result.capturing-ios .theory h3{color:#daccf4!important}
-#result.capturing-ios .tclinic{color:#d2c7ee!important}
-#result.capturing-ios .eyebrow{color:rgba(244,238,254,.58)!important}
-#result.capturing-ios .foot{color:rgba(244,238,254,.6)!important}
-#result.capturing-ios .resultmap line{stroke:rgba(255,255,255,.5)!important}
+/* iOS 渲染偏暗 → 截圖時針對 iOS 把文字提到接近純白、圖表加亮（Android 不受影響） */
+#result.capturing-ios .profile{color:#ffffff!important}
+#result.capturing-ios .theory p{color:#f3eeff!important}
+#result.capturing-ios .theory h3{color:#e4ddf8!important}
+#result.capturing-ios .tclinic{color:#ddd4f2!important}
+#result.capturing-ios .tname{color:inherit}
+#result.capturing-ios .eyebrow{color:rgba(247,243,255,.66)!important}
+#result.capturing-ios .foot{color:rgba(247,243,255,.66)!important}
+#result.capturing-ios .readout span{background:rgba(255,255,255,.12)!important}
+#result.capturing-ios .resultmap line{stroke:rgba(255,255,255,.6)!important}
 #result.capturing-ios .resultmap text{opacity:1!important}
 /* iOS 長按存圖浮層 */
 #saveov{display:none;position:fixed;inset:0;z-index:60;
@@ -498,17 +500,17 @@ function finish(){
 function drawMap(anx,avoid,color){
   const S=280,P=32,W=S-P*2;
   const x=P+(avoid/100)*W, y=P+(1-anx/100)*W;
-  const q=(qx,qy,c,label,lx,ly)=>'<rect x="'+qx+'" y="'+qy+'" width="'+(W/2)+'" height="'+(W/2)+'" fill="'+c+'" opacity=".20"/>'
+  const q=(qx,qy,c,label,lx,ly)=>'<rect x="'+qx+'" y="'+qy+'" width="'+(W/2)+'" height="'+(W/2)+'" fill="'+c+'" opacity=".26"/>'
     +'<text x="'+lx+'" y="'+ly+'" font-size="11" fill="'+c+'" opacity="1">'+label+'</text>';
   $("resultmap").innerHTML=
   '<svg viewBox="0 0 '+S+' '+S+'" font-family="Space Mono, monospace">'
-  +'<rect x="'+P+'" y="'+P+'" width="'+W+'" height="'+W+'" rx="10" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.32)"/>'
+  +'<rect x="'+P+'" y="'+P+'" width="'+W+'" height="'+W+'" rx="10" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.42)"/>'
   +q(P+W/2,P,"#c9a8ff","混亂",P+W/2+8,P+16)
   +q(P,P,"#ff9aa9","焦慮",P+8,P+16)
   +q(P,P+W/2,"#ffd27a","安全",P+8,P+W-10)
   +q(P+W/2,P+W/2,"#7fe6d8","逃避",P+W/2+8,P+W-10)
-  +'<line x1="'+P+'" y1="'+(P+W/2)+'" x2="'+(P+W)+'" y2="'+(P+W/2)+'" stroke="rgba(255,255,255,.34)" stroke-dasharray="3 3"/>'
-  +'<line x1="'+(P+W/2)+'" y1="'+P+'" x2="'+(P+W/2)+'" y2="'+(P+W)+'" stroke="rgba(255,255,255,.34)" stroke-dasharray="3 3"/>'
+  +'<line x1="'+P+'" y1="'+(P+W/2)+'" x2="'+(P+W)+'" y2="'+(P+W/2)+'" stroke="rgba(255,255,255,.44)" stroke-dasharray="3 3"/>'
+  +'<line x1="'+(P+W/2)+'" y1="'+P+'" x2="'+(P+W/2)+'" y2="'+(P+W)+'" stroke="rgba(255,255,255,.44)" stroke-dasharray="3 3"/>'
   +'<text x="'+P+'" y="'+(S-6)+'" font-size="9.5" fill="rgba(244,238,254,.62)">低 ← 逃避 → 高</text>'
   +'<text x="'+(P-12)+'" y="'+(P-12)+'" font-size="9.5" fill="rgba(244,238,254,.62)">焦慮 ↑</text>'
   +'<circle cx="'+x+'" cy="'+y+'" r="20" fill="'+color+'" opacity=".3">'
@@ -534,20 +536,22 @@ async function shot(){
     if(document.fonts&&document.fonts.ready){ try{ await document.fonts.ready; }catch(_){} }
     const rect=node.getBoundingClientRect();
     const M=26, W=rect.width+M*2, H=rect.height+M*2, D=Math.max(W,H);
-    /* iOS Safari 有 canvas 尺寸上限，卡片太長時自動降倍率，避免內容被縱向壓扁 */
-    const SC=Math.max(1, Math.min(2, 4000/D));
     const ios=isIOS();
+    /* iOS Safari 的 canvas 尺寸上限較嚴：倍率上限壓更低，徹底避免內容被縱向壓扁 */
+    const SC=Math.max(1, Math.min(2, (ios?2600:4000)/D));
     const cv=document.createElement("canvas");
     cv.width=Math.round(W*SC); cv.height=Math.round(H*SC);
     const ctx=cv.getContext("2d"); ctx.scale(SC,SC);
 
-    /* 底漸層（亮版） */
+    /* 底漸層（iOS 渲染偏暗 → 用更亮的底；Android 維持原樣） */
     const g=ctx.createLinearGradient(W*0.15,0,W*0.85,H);
-    g.addColorStop(0,"#2a2152"); g.addColorStop(.55,"#332863"); g.addColorStop(1,"#241d47");
+    if(ios){ g.addColorStop(0,"#372d6c"); g.addColorStop(.55,"#41347d"); g.addColorStop(1,"#30275c"); }
+    else   { g.addColorStop(0,"#2a2152"); g.addColorStop(.55,"#332863"); g.addColorStop(1,"#241d47"); }
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
-    /* 夢幻光球（原生 radial，iOS 也可靠） */
-    const orb=(x,y,r,c,a)=>{const rg=ctx.createRadialGradient(x,y,0,x,y,r);
+    /* 夢幻光球（iOS 加亮係數）；原生 radial 跨裝置可靠 */
+    const ob = ios ? 1.4 : 1;
+    const orb=(x,y,r,c,a)=>{a=Math.min(1,a*ob);const rg=ctx.createRadialGradient(x,y,0,x,y,r);
       rg.addColorStop(0,hexA(c,a));rg.addColorStop(0.55,hexA(c,a*0.4));rg.addColorStop(1,"rgba(0,0,0,0)");
       ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill();};
     ctx.globalCompositeOperation="lighter";
@@ -561,7 +565,7 @@ async function shot(){
 
     /* 玻璃卡底（iOS 渲染偏暗 → 調淡讓光球/圖表更亮；Android 維持原深底以保對比） */
     rr(ctx,M,M,rect.width,rect.height,24);
-    ctx.fillStyle = ios ? "rgba(26,20,52,0.64)" : "rgba(15,11,32,0.85)"; ctx.fill();
+    ctx.fillStyle = ios ? "rgba(32,25,62,0.48)" : "rgba(15,11,32,0.85)"; ctx.fill();
     rr(ctx,M,M,rect.width,rect.height,24);
     ctx.lineWidth=1; ctx.strokeStyle="rgba(255,255,255,0.18)"; ctx.stroke();
 
