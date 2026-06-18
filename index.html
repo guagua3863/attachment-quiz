@@ -489,19 +489,19 @@ function finish(){
 function drawMap(anx,avoid,color){
   const S=280,P=32,W=S-P*2;
   const x=P+(avoid/100)*W, y=P+(1-anx/100)*W;
-  const q=(qx,qy,c,label,lx,ly)=>'<rect x="'+qx+'" y="'+qy+'" width="'+(W/2)+'" height="'+(W/2)+'" fill="'+c+'" opacity=".14"/>'
-    +'<text x="'+lx+'" y="'+ly+'" font-size="11" fill="'+c+'" opacity=".95">'+label+'</text>';
+  const q=(qx,qy,c,label,lx,ly)=>'<rect x="'+qx+'" y="'+qy+'" width="'+(W/2)+'" height="'+(W/2)+'" fill="'+c+'" opacity=".20"/>'
+    +'<text x="'+lx+'" y="'+ly+'" font-size="11" fill="'+c+'" opacity="1">'+label+'</text>';
   $("resultmap").innerHTML=
   '<svg viewBox="0 0 '+S+' '+S+'" font-family="Space Mono, monospace">'
-  +'<rect x="'+P+'" y="'+P+'" width="'+W+'" height="'+W+'" rx="10" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.18)"/>'
+  +'<rect x="'+P+'" y="'+P+'" width="'+W+'" height="'+W+'" rx="10" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.32)"/>'
   +q(P+W/2,P,"#c9a8ff","混亂",P+W/2+8,P+16)
   +q(P,P,"#ff9aa9","焦慮",P+8,P+16)
   +q(P,P+W/2,"#ffd27a","安全",P+8,P+W-10)
   +q(P+W/2,P+W/2,"#7fe6d8","逃避",P+W/2+8,P+W-10)
-  +'<line x1="'+P+'" y1="'+(P+W/2)+'" x2="'+(P+W)+'" y2="'+(P+W/2)+'" stroke="rgba(255,255,255,.22)" stroke-dasharray="3 3"/>'
-  +'<line x1="'+(P+W/2)+'" y1="'+P+'" x2="'+(P+W/2)+'" y2="'+(P+W)+'" stroke="rgba(255,255,255,.22)" stroke-dasharray="3 3"/>'
-  +'<text x="'+P+'" y="'+(S-6)+'" font-size="9.5" fill="rgba(244,238,254,.45)">低 ← 逃避 → 高</text>'
-  +'<text x="'+(P-12)+'" y="'+(P-12)+'" font-size="9.5" fill="rgba(244,238,254,.45)">焦慮 ↑</text>'
+  +'<line x1="'+P+'" y1="'+(P+W/2)+'" x2="'+(P+W)+'" y2="'+(P+W/2)+'" stroke="rgba(255,255,255,.34)" stroke-dasharray="3 3"/>'
+  +'<line x1="'+(P+W/2)+'" y1="'+P+'" x2="'+(P+W/2)+'" y2="'+(P+W)+'" stroke="rgba(255,255,255,.34)" stroke-dasharray="3 3"/>'
+  +'<text x="'+P+'" y="'+(S-6)+'" font-size="9.5" fill="rgba(244,238,254,.62)">低 ← 逃避 → 高</text>'
+  +'<text x="'+(P-12)+'" y="'+(P-12)+'" font-size="9.5" fill="rgba(244,238,254,.62)">焦慮 ↑</text>'
   +'<circle cx="'+x+'" cy="'+y+'" r="20" fill="'+color+'" opacity=".3">'
   +'<animate attributeName="r" values="0;28;20" dur=".8s" fill="freeze" calcMode="spline" keySplines="0.2 0.7 0.2 1;0.4 0 0.2 1" keyTimes="0;0.6;1"/></circle>'
   +'<circle cx="'+x+'" cy="'+y+'" r="6.5" fill="'+color+'" stroke="#fff" stroke-width="2">'
@@ -524,7 +524,9 @@ async function shot(){
   try{
     if(document.fonts&&document.fonts.ready){ try{ await document.fonts.ready; }catch(_){} }
     const rect=node.getBoundingClientRect();
-    const M=26, SC=2, W=rect.width+M*2, H=rect.height+M*2, D=Math.max(W,H);
+    const M=26, W=rect.width+M*2, H=rect.height+M*2, D=Math.max(W,H);
+    /* iOS Safari 有 canvas 尺寸上限，卡片太長時自動降倍率，避免內容被縱向壓扁 */
+    const SC=Math.max(1, Math.min(2, 4000/D));
     const cv=document.createElement("canvas");
     cv.width=Math.round(W*SC); cv.height=Math.round(H*SC);
     const ctx=cv.getContext("2d"); ctx.scale(SC,SC);
@@ -547,11 +549,11 @@ async function shot(){
     orb(W*0.72,H*0.96,D*0.30,"#ffd9a8",0.28);
     ctx.globalCompositeOperation="source-over";
 
-    /* 玻璃卡底（半透明深色：字好讀又透出光球） */
+    /* 玻璃卡底（加深的半透明：字與圖表清楚，周圍仍透出光球） */
     rr(ctx,M,M,rect.width,rect.height,24);
-    ctx.fillStyle="rgba(18,14,38,0.60)"; ctx.fill();
+    ctx.fillStyle="rgba(15,11,32,0.85)"; ctx.fill();
     rr(ctx,M,M,rect.width,rect.height,24);
-    ctx.lineWidth=1; ctx.strokeStyle="rgba(255,255,255,0.13)"; ctx.stroke();
+    ctx.lineWidth=1; ctx.strokeStyle="rgba(255,255,255,0.16)"; ctx.stroke();
 
     /* 卡片內容（透明底，html2canvas 只畫文字/座標圖） */
     node.classList.add("capturing");
