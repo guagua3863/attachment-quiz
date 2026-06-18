@@ -135,17 +135,6 @@ body{
 /* 截圖時卡片設透明底、去邊去陰影，讓原生 Canvas 畫的夢幻底+光球透出來 */
 #result.capturing{background:transparent!important;border:0!important;box-shadow:none!important;
   backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-/* iOS 渲染偏暗 → 截圖時針對 iOS 把文字提到接近純白、圖表加亮（Android 不受影響） */
-#result.capturing-ios .profile{color:#ffffff!important}
-#result.capturing-ios .theory p{color:#f3eeff!important}
-#result.capturing-ios .theory h3{color:#e4ddf8!important}
-#result.capturing-ios .tclinic{color:#ddd4f2!important}
-#result.capturing-ios .tname{color:inherit}
-#result.capturing-ios .eyebrow{color:rgba(247,243,255,.66)!important}
-#result.capturing-ios .foot{color:rgba(247,243,255,.66)!important}
-#result.capturing-ios .readout span{background:rgba(255,255,255,.12)!important}
-#result.capturing-ios .resultmap line{stroke:rgba(255,255,255,.6)!important}
-#result.capturing-ios .resultmap text{opacity:1!important}
 /* iOS 長按存圖浮層 */
 #saveov{display:none;position:fixed;inset:0;z-index:60;
   background:rgba(9,7,20,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
@@ -543,15 +532,13 @@ async function shot(){
     cv.width=Math.round(W*SC); cv.height=Math.round(H*SC);
     const ctx=cv.getContext("2d"); ctx.scale(SC,SC);
 
-    /* 底漸層（iOS 渲染偏暗 → 用更亮的底；Android 維持原樣） */
+    /* 底漸層（單一配方，跨裝置一致） */
     const g=ctx.createLinearGradient(W*0.15,0,W*0.85,H);
-    if(ios){ g.addColorStop(0,"#372d6c"); g.addColorStop(.55,"#41347d"); g.addColorStop(1,"#30275c"); }
-    else   { g.addColorStop(0,"#2a2152"); g.addColorStop(.55,"#332863"); g.addColorStop(1,"#241d47"); }
+    g.addColorStop(0,"#2a2152"); g.addColorStop(.55,"#332863"); g.addColorStop(1,"#241d47");
     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
-    /* 夢幻光球（iOS 加亮係數）；原生 radial 跨裝置可靠 */
-    const ob = ios ? 1.4 : 1;
-    const orb=(x,y,r,c,a)=>{a=Math.min(1,a*ob);const rg=ctx.createRadialGradient(x,y,0,x,y,r);
+    /* 夢幻光球（原生 radial，跨裝置一致） */
+    const orb=(x,y,r,c,a)=>{const rg=ctx.createRadialGradient(x,y,0,x,y,r);
       rg.addColorStop(0,hexA(c,a));rg.addColorStop(0.55,hexA(c,a*0.4));rg.addColorStop(1,"rgba(0,0,0,0)");
       ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill();};
     ctx.globalCompositeOperation="lighter";
@@ -563,24 +550,23 @@ async function shot(){
     orb(W*0.72,H*0.96,D*0.30,"#ffd9a8",0.28);
     ctx.globalCompositeOperation="source-over";
 
-    /* 玻璃卡底（iOS 渲染偏暗 → 調淡讓光球/圖表更亮；Android 維持原深底以保對比） */
+    /* 玻璃卡底（單一配方：字與圖表清楚，周圍透出光球） */
     rr(ctx,M,M,rect.width,rect.height,24);
-    ctx.fillStyle = ios ? "rgba(32,25,62,0.48)" : "rgba(15,11,32,0.85)"; ctx.fill();
+    ctx.fillStyle="rgba(15,11,32,0.82)"; ctx.fill();
     rr(ctx,M,M,rect.width,rect.height,24);
     ctx.lineWidth=1; ctx.strokeStyle="rgba(255,255,255,0.18)"; ctx.stroke();
 
     /* 卡片內容（透明底，html2canvas 只畫文字/座標圖） */
     node.classList.add("capturing");
-    if(ios) node.classList.add("capturing-ios");
     const panel=await html2canvas(node,{backgroundColor:null,scale:SC,useCORS:true,
       ignoreElements:el=>el.hasAttribute&&el.hasAttribute("data-noshot")});
-    node.classList.remove("capturing","capturing-ios");
+    node.classList.remove("capturing");
     ctx.drawImage(panel, M, M, rect.width, rect.height);
 
     const url=cv.toDataURL("image/png");
     if(ios){ showSaveOverlay(url); btn.textContent="圖片已產生"; }
     else{ const link=document.createElement("a"); link.download="依戀座標.png"; link.href=url; link.click(); btn.textContent="已保存 ✓"; }
-  }catch(e){ node.classList.remove("capturing","capturing-ios"); btn.textContent="截圖失敗，請重試"; }
+  }catch(e){ node.classList.remove("capturing"); btn.textContent="截圖失敗，請重試"; }
   setTimeout(()=>btn.textContent=old,1800);
 }
 
